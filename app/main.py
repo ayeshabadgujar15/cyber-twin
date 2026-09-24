@@ -1,9 +1,12 @@
+from urllib.error import URLError
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
 from app.gmail.oauth import get_authorization_url, fetch_credentials
 from app.gmail.scanner import GmailScanner
 from app.services.account_discovery import AccountDiscoveryService
+from app.security.breach_checker import BreachChecker
 
 app = FastAPI()
 
@@ -51,6 +54,22 @@ def discover_accounts():
 
     discovery = AccountDiscoveryService()
     accounts = discovery.discover_accounts(emails)
+
+    try:
+        checks = BreachChecker().check_breaches(
+            [account["domain"] for account in accounts]
+        )
+    except (URLError, OSError, ValueError, KeyError, TypeError):
+        for account in accounts:
+            account["breach_check"] = {
+                "status": "unavailable",
+                "known_breach": None,
+                "breaches": None,
+                "note": "Breach history could not be checked. Try again later.",
+            }
+    else:
+        for account, check in zip(accounts, checks):
+            account["breach_check"] = {"status": "checked", **check}
 
     return {
         "accounts_found": len(accounts),
