@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber Twin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Cyber Twin</h1>
+    <p class="muted">Digital footprint scanner</p>
+  </header>
+
+  <main>
+    <!-- Step 1: enter email and grant access -->
+    <section id="connect-view" hidden>
+      <h2>Scan your inbox</h2>
+      <p>
+        Enter your Gmail address. Google will ask you to grant
+        <strong>read-only</strong> access. Cyber Twin reads the sender,
+        subject and date of every email, never the message contents,
+        to find the services you have accounts with. It then checks those
+        services and your address against Have I Been Pwned.
+      </p>
+      <form id="connect-form" action="/gmail/login" method="get">
+        <label for="email">Gmail address</label>
+        <div class="row">
+          <input id="email" name="email" type="email" required
+                 autocomplete="email" placeholder="you@gmail.com">
+          <button type="submit">Connect Gmail</button>
+        </div>
+      </form>
+      <p id="connect-error" class="notice" hidden></p>
+    </section>
+
+    <!-- Step 2: scanning -->
+    <section id="scan-view" hidden>
+      <h2>Scanning <span id="scan-email"></span></h2>
+      <p id="scan-phase"></p>
+      <div class="progress"><div id="scan-bar"></div></div>
+      <p class="muted">
+        Large inboxes can take several minutes. You can leave this page open.
+      </p>
+    </section>
+
+    <!-- Scan failed -->
+    <section id="error-view" hidden>
+      <h2>Scan failed</h2>
+      <p id="error-message"></p>
+      <div class="row">
+        <button id="error-retry" type="button">Scan again</button>
+        <button id="error-disconnect" type="button" class="secondary">Disconnect</button>
+      </div>
+    </section>
+
+    <!-- Step 3: results -->
+    <section id="results-view" hidden>
+      <div class="summary">
+        <div>
+          <h2 id="results-email"></h2>
+          <p id="results-meta" class="muted"></p>
+          <p id="results-mismatch" class="notice" hidden></p>
+        </div>
+        <div class="row">
+          <button id="rescan" type="button" class="secondary">Scan again</button>
+          <button id="disconnect" type="button" class="secondary">Disconnect</button>
+        </div>
+      </div>
+
+      <h3>Module 1 · Connected services <span id="accounts-count" class="muted"></span></h3>
+      <p id="accounts-summary" class="muted"></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Domain</th>
+              <th>First seen</th>
+              <th>Evidence</th>
+              <th>Breach history</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-body"></tbody>
+        </table>
+      </div>
+
+      <h3>Module 2 · Your email address in known breaches</h3>
+      <div id="email-breaches"></div>
+
+      <p class="muted small">
+        Breach data from <a href="https://haveibeenpwned.com/" target="_blank" rel="noopener">Have I Been Pwned</a>.
+        A service breach does not mean your own account was exposed, and no
+        known breach does not mean a service is safe.
+      </p>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
