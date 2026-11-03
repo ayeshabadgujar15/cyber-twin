@@ -13,6 +13,7 @@ TITLE='Digital Footprint & Security Report'
 def report_data(snapshot):
     accounts=[]
     for item in snapshot.get('accounts',[]):
+        if item.get('finding_status')=='dismissed':continue
         check=item.get('breach_check') or {}
         reasons=[]
         if check.get('known_breach'):

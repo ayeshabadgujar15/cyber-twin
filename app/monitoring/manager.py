@@ -227,7 +227,7 @@ class MonitorManager:
             self._baseline(scanner,resync=True)
 
     def poll_breaches(self):
-        self._check();accounts=self.store.accounts(self.email)
+        self._check();accounts=[item for item in self.store.accounts(self.email) if item.get('finding_status')!='dismissed']
         if not accounts:return
         try:
             checks=self.breach_factory().check_breaches([item['domain'] for item in accounts])

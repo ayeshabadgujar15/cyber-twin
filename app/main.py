@@ -488,3 +488,6 @@ from app.monitoring.router import create_monitor_router
 monitor = MonitorManager(lambda: (gmail_credentials, gmail_connection_generation),
                          Path(__file__).resolve().parents[1] / 'data' / 'monitor.sqlite3')
 app.include_router(create_monitor_router(monitor, require_local_request))
+
+from app.monitoring.preferences import create_preferences_router
+app.include_router(create_preferences_router(monitor, require_local_request))

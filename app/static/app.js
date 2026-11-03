@@ -30,7 +30,7 @@ function card(record) {
   if (service.activity_status_explanation) confidence.append(node('p', service.activity_status_explanation, 'evidence-note'));
   const timeline = [...(service.timeline || [])].reverse(); const detail = node('details'); detail.open = currentResults.length === 1; detail.append(node('summary', 'Evidence timeline · ' + timeline.length + ' event' + (timeline.length === 1 ? '' : 's')));
   if (!timeline.length) detail.append(node('p', 'No supported dated evidence was returned.', 'evidence-note'));
-  const list = node('ol', undefined, 'timeline'); for (const event of timeline) { const item = node('li'); item.append(node('strong', labels[event.event_type] || event.event_type), node('span', date(event.observed_at) + ' · ' + event.source + ' · ' + basis(event.timestamp_basis))); if (event.classification_explanation) item.append(node('small', event.classification_explanation)); list.append(item); } detail.append(list); box.append(detail); return box;
+  const list = node('ol', undefined, 'timeline'); for (const event of timeline) { const item = node('li'); item.append(node('strong', labels[event.event_type] || event.event_type), node('span', date(event.observed_at) + ' · ' + event.source + ' · ' + basis(event.timestamp_basis))); if (event.classification_explanation) item.append(node('small', event.classification_explanation)); list.append(item); } detail.append(list); box.append(detail); if (!record.provider && typeof findingControls === 'function') box.append(findingControls(service.domain)); return box;
 }
 function renderRecords(records, coverage, title, insights = null, demo = false) {
   const publicLookup = records.some(record => record.provider);

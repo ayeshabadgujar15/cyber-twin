@@ -28,6 +28,8 @@ class MonitorStore:
                 CREATE TABLE IF NOT EXISTS accounts(email TEXT,domain TEXT,name TEXT,first_seen TEXT,last_seen TEXT,
                   signup_clue INTEGER DEFAULT 0,security_alert INTEGER DEFAULT 0,password_event INTEGER DEFAULT 0,
                   check_json TEXT DEFAULT '{}',PRIMARY KEY(email,domain));
+                CREATE TABLE IF NOT EXISTS finding_reviews(email TEXT,domain TEXT,status TEXT,PRIMARY KEY(email,domain));
+                CREATE TABLE IF NOT EXISTS action_items(email TEXT,domain TEXT,action_id TEXT,title TEXT,status TEXT,due_date TEXT,PRIMARY KEY(email,domain,action_id));
                 CREATE TABLE IF NOT EXISTS processed(email TEXT,message_id TEXT,seen_at TEXT,PRIMARY KEY(email,message_id));
                 CREATE TABLE IF NOT EXISTS alerts(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT,domain TEXT,
                   kind TEXT,title TEXT,detail TEXT,created_at TEXT,acknowledged INTEGER DEFAULT 0,
@@ -61,7 +63,8 @@ class MonitorStore:
           security_alert=MAX(accounts.security_alert,excluded.security_alert),password_event=MAX(accounts.password_event,excluded.password_event)''',
           (email,domain,service.get('service_name') or domain,min(dates_first) if dates_first else None,
            max(dates_last) if dates_last else None,int(signup),int(bool(service.get('security_alert'))),int(bool(service.get('password_event')))))
-        if notify and signup and (previous is None or not previous['signup_clue']):
+        review=db.execute('SELECT status FROM finding_reviews WHERE email=? AND domain=?',(email,domain)).fetchone()
+        if notify and signup and (previous is None or not previous['signup_clue']) and (review is None or review['status']!='dismissed'):
             self._alert(db,email,domain,'signup_clue','New signup evidence: '+domain,
                         'A registration/verification notification matched this service. Completed signup and ownership are not verified.',
                         'signup:'+domain)
@@ -124,9 +127,9 @@ class MonitorStore:
     def accounts(self,email):
         if not self.path.exists():return []
         with self.connection() as db:
-            rows=db.execute('SELECT * FROM accounts WHERE email=? ORDER BY domain',(email,)).fetchall()
+            rows=db.execute("SELECT a.*,COALESCE(r.status,'unconfirmed') AS finding_status FROM accounts a LEFT JOIN finding_reviews r ON a.email=r.email AND a.domain=r.domain WHERE a.email=? ORDER BY a.domain",(email,)).fetchall()
         return [{'domain':row['domain'],'service_name':row['name'],'first_seen':row['first_seen'],'last_seen':row['last_seen'],
-                 'signup_clue':bool(row['signup_clue']),'security_alert':bool(row['security_alert']),
+                 'finding_status':row['finding_status'],'signup_clue':bool(row['signup_clue']),'security_alert':bool(row['security_alert']),
                  'password_event':bool(row['password_event']),'breach_check':json.loads(row['check_json'])} for row in rows]
 
     def apply_checks(self,email,checks):
@@ -142,7 +145,8 @@ class MonitorStore:
                            'note':'Provider check failed. Any earlier breach findings are retained and may be stale.'}
                 else:
                     saved={**check,'last_attempt_at':now,'last_success_at':now}
-                    for breach in check.get('breaches',[]):
+                    review=db.execute('SELECT status FROM finding_reviews WHERE email=? AND domain=?',(email,domain)).fetchone()
+                    for breach in ([] if review and review['status']=='dismissed' else check.get('breaches',[])):
                         version=breach.get('modified_date') or breach.get('added_date') or breach.get('breach_date') or ''
                         identity=breach.get('id') or breach.get('name') or 'unknown'
                         self._alert(db,email,domain,'service_breach','Service breach history found: '+domain,
@@ -176,5 +180,31 @@ class MonitorStore:
     def forget(self,email):
         if not self.path.exists():return
         with self.connection() as db:
-            for table in ['alerts','processed','accounts','mailboxes']:
+            for table in ['alerts','processed','accounts','mailboxes','finding_reviews','action_items']:
+                db.execute(f'DELETE FROM {table} WHERE email=?',(email,))
+
+
+    def preferences(self,email,today=None):
+        if not self.path.exists():return {'email':email,'reviews':{},'actions':[],'reminders':[]}
+        today=today or datetime.now().date().isoformat()
+        with self.connection() as db:
+            reviews={row['domain']:row['status'] for row in db.execute('SELECT domain,status FROM finding_reviews WHERE email=?',(email,))}
+            actions=[dict(row) for row in db.execute('SELECT domain,action_id,title,status,due_date FROM action_items WHERE email=?',(email,))]
+        reminders=[item for item in actions if item['status']=='pending' and item['due_date'] and item['due_date']<=today and reviews.get(item['domain'])!='dismissed']
+        return {'email':email,'reviews':reviews,'actions':actions,'reminders':reminders}
+
+    def review_finding(self,email,domain,status):
+        with self.connection() as db:
+            db.execute('INSERT INTO finding_reviews VALUES (?,?,?) ON CONFLICT(email,domain) DO UPDATE SET status=excluded.status',(email,domain,status))
+            if status=='dismissed':
+                db.execute("UPDATE alerts SET acknowledged=1 WHERE email=? AND domain=? AND kind IN ('signup_clue','service_breach')",(email,domain))
+
+    def save_action(self,email,domain,action_id,title,status,due_date):
+        with self.connection() as db:
+            db.execute('INSERT INTO action_items VALUES (?,?,?,?,?,?) ON CONFLICT(email,domain,action_id) DO UPDATE SET title=excluded.title,status=excluded.status,due_date=excluded.due_date',
+                       (email,domain,action_id,title,status,due_date))
+
+    def clear_preferences(self,email):
+        with self.connection() as db:
+            for table in ['finding_reviews','action_items']:
                 db.execute(f'DELETE FROM {table} WHERE email=?',(email,))

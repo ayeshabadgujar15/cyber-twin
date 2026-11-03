@@ -5,7 +5,7 @@ let breachRequestActive = false;
 const reviewedSecuritySteps = new Set();
 
 function moduleServices() {
-  return workspaceRecords.filter(service => MigrationModel.validDomain(service.domain)).map(service => ({
+  return workspaceRecords.filter(service => MigrationModel.validDomain(service.domain) && (typeof findingStatus !== 'function' || findingStatus(service.domain) !== 'dismissed')).map(service => ({
     domain:service.domain, service_name:String(service.service_name || service.domain).slice(0,200),
     security_alert:(service.timeline || []).some(event => event.event_type === 'security' && event.confidence_score >= 85),
     password_event:(service.timeline || []).some(event => event.event_type === 'password')
@@ -17,6 +17,7 @@ function resetModuleWorkflow() {
   $('continue-breaches').hidden = !workspaceRecords.length;
   $('email-breach-results').replaceChildren();
   renderBreachModule();
+  if (typeof refreshPreferences === 'function') refreshPreferences();
 }
 function restoreModuleView() {
   if (activeView === 'gmail') {
@@ -61,7 +62,7 @@ function renderBreachModule() {
   const list=node('div'); area.append(list); let limit=50;
   const more=workspaceButton('Show 50 more services',()=>{limit+=50; draw();}); area.append(more);
   function draw() {
-    list.replaceChildren(); const matches=moduleBreachData.checks.filter(check=>(check.domain+' '+check.service_name).toLowerCase().includes(search.value.toLowerCase()) && (!only.checked || check.known_breach === true));
+    list.replaceChildren(); const matches=moduleBreachData.checks.filter(check=>(typeof findingStatus !== 'function' || findingStatus(check.domain)!=='dismissed') && (check.domain+' '+check.service_name).toLowerCase().includes(search.value.toLowerCase()) && (!only.checked || check.known_breach === true));
     count.textContent=Math.min(limit,matches.length)+' of '+matches.length+' services'; more.hidden=limit>=matches.length;
     for (const check of matches.slice(0,limit)) {
     const card = node('article', undefined, 'breach-card'); card.append(node('h3', check.service_name || check.domain), node('p', check.domain, 'subtle'));
@@ -105,7 +106,8 @@ function renderSecurityModule() {
   const services = moduleServices();
   if (!services.length) area.append(node('p', 'Complete Module 1 to get steps for your discovered services.', 'coverage'));
   if (workspaceDemo) area.append(node('p', 'DEMO · Fictional accounts and incident examples.', 'module-demo'));
-  const plans = moduleBreachData?.security_plan || generalSecurityPlan(services);
+  const plans = (moduleBreachData?.security_plan || generalSecurityPlan(services)).filter(plan => typeof findingStatus !== 'function' || findingStatus(plan.domain)!=='dismissed');
+  if (typeof renderActionReminders === 'function') renderActionReminders();
   const toolbar = node('div', undefined, 'result-toolbar'); const search = node('input');
   search.placeholder = 'Find a service to secure'; search.setAttribute('aria-label', 'Find a service to secure'); toolbar.append(search); area.append(toolbar);
   const count = node('p', '', 'subtle'); count.setAttribute('role','status'); count.setAttribute('aria-live','polite'); area.append(count);
@@ -119,9 +121,9 @@ function renderSecurityModule() {
     card.append(node('summary', (plan.service_name || plan.domain) + ' · ' + (plan.priority === 'review_first' ? 'Review first' : 'Routine protection')), node('p', plan.domain, 'subtle'), node('p', plan.reason, 'evidence-note'));
     for (const step of plan.steps) {
       const key = plan.domain + ':' + step.id; const label = node('label', undefined, 'security-step');
-      const box = node('input'); box.type = 'checkbox'; box.checked = reviewedSecuritySteps.has(key); box.setAttribute('aria-label', 'Reviewed ' + step.title + ' for ' + plan.domain);
-      box.addEventListener('change', () => { if (box.checked) reviewedSecuritySteps.add(key); else reviewedSecuritySteps.delete(key); });
-      label.append(box, node('strong', step.title), node('small', step.detail)); card.append(label);
+      const box = node('input'); box.type = 'checkbox'; box.checked = typeof actionDone === 'function' ? actionDone(plan.domain,step.id) : reviewedSecuritySteps.has(key); box.setAttribute('aria-label', 'Reviewed ' + step.title + ' for ' + plan.domain);
+      box.addEventListener('change', async () => { if (typeof saveSecurityAction === 'function') { box.disabled=true; try { await saveSecurityAction(plan.domain,step,box.checked); } catch(error) { box.checked=!box.checked; showMessage(error.message,true); } finally {box.disabled=false;} } else { if (box.checked) reviewedSecuritySteps.add(key); else reviewedSecuritySteps.delete(key); } });
+      label.append(box, node('strong', step.title + (box.checked ? ' · Done' : ' · Pending')), node('small', step.detail)); card.append(label); if (typeof actionReminderControl === 'function') card.append(actionReminderControl(plan.domain,step));
     }
     list.append(card);
     }

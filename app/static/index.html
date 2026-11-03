@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light"><title>Cyber Twin · Account overview</title>
-  <link rel="stylesheet" href="/static/style.css?v=monitor-1"><script src="/static/workspace.js?v=monitor-1" defer></script><script src="/static/app.js?v=monitor-1" defer></script><script src="/static/migration-model.js?v=monitor-1" defer></script><script src="/static/migration.js?v=monitor-1" defer></script>
-  <script src="/static/modules.js?v=monitor-1" defer></script>
-  <script src="/static/monitor.js?v=monitor-1" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=reviews-1"><script src="/static/workspace.js?v=reviews-1" defer></script><script src="/static/app.js?v=reviews-1" defer></script><script src="/static/migration-model.js?v=reviews-1" defer></script><script src="/static/migration.js?v=reviews-1" defer></script>
+  <script src="/static/modules.js?v=reviews-1" defer></script>
+  <script src="/static/monitor.js?v=reviews-1" defer></script>
+  <script src="/static/preferences.js?v=reviews-1" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to workspace</a>
@@ -61,6 +62,7 @@
     </section>
     <section id="secure-panel" class="view-panel" hidden>
       <div class="search-card"><h2>Your next security steps.</h2><p>Follow these steps in the service’s official app or website. Cyber Twin never changes passwords or account settings for you. Checkmarks record your review on this page only.</p></div>
+<section id="action-reminders" role="status" aria-live="polite"></section><p class="evidence-note">Pending / Done decisions and reminder dates are saved locally for your mailbox. Reminders appear in this app when you open it; no reminder emails are sent. Done is your record, not independent verification.</p><button id="clear-preferences" class="text-button" type="button">Clear saved reviews &amp; actions</button>
       <div id="security-plan-results"></div>
       <details class="module-extra" id="review-details"><summary>Mailbox review prompts: alerts, password events, billing and forgotten accounts</summary><section id="review-area" aria-label="Personal review queue" hidden></section></details>
       <details class="module-extra"><summary>Optional: move away from an old email</summary>

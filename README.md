@@ -219,3 +219,23 @@ services and alerts; the downloaded report includes the full service inventory.
 Processed message-ID markers expire after 30 days; signup/incident alert keys
 still prevent repeated alert spam. Monitoring data remains until explicitly
 deleted. Review other-user access to this local machine accordingly.
+
+
+## Finding reviews and security action tracking
+
+Service cards in Module 1 and the monitored inventory provide Confirm / Dismiss
+and Undo. Decisions survive rescans and restarts in the local SQLite database,
+isolated by the actual connected Gmail address. Confirmation is the user's
+statement, not verified ownership. Dismissed findings are excluded from normal
+breach lookup, future monitored signup/breach alerts and security-plan views;
+existing related alerts are acknowledged, not deleted. Undo restores eligibility.
+
+Module 3 saves each security step as Pending / Done and allows a reminder date.
+Due/overdue pending actions appear in-app when opened; no email or background
+desktop reminder delivery is promised. Done remains a self-report. These
+features do not require enabling continuous monitoring, but do require a loaded
+Gmail scan or a monitoring mailbox. Save controls themselves opt into local
+decision storage. No subjects, passwords or tokens are persisted. Clear these
+decisions with Module 3's privacy control; Module 4 data deletion also removes
+them. Fictional demo decisions use separate browser storage and never seed the
+real mailbox's decisions. Switching accounts never carries decisions across.

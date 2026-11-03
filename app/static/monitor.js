@@ -41,6 +41,7 @@ function renderMonitor() {
   for(const item of data.accounts || []) {
     const check=item.breach_check || {}; const action=check.known_breach || item.security_alert || item.password_event;
     const row=node('div',undefined,'monitor-inventory-row');
+    if (typeof findingControls === 'function') row.append(findingControls(item.domain));
     row.append(node('span',item.service_name+' · '+item.domain),node('span',action?'Action / review needed':check.status==='checked'?'No flagged signals':'Not checked',action?'action-needed':check.status==='checked'?'':'check-needed'));inventory.append(row);
   }
   reportButtons();
@@ -58,6 +59,7 @@ async function refreshMonitor() {
       if(enabled)try{new Notification('Cyber Twin: '+incoming.length+' new alert(s)',{body:incoming[0].title,tag:'cybertwin-monitor'});}catch{}
     }
     monitorAlertCursor=maximum;monitorSnapshot=data;renderMonitor();
+    if(typeof refreshPreferences==='function' && decisionScope()!==preferenceScope)refreshPreferences();
   } catch {
     $('monitor-state').textContent='Cannot reach the monitoring server. Status is unknown; saved information may be stale.';
   } finally {monitorRefreshActive=false;}
