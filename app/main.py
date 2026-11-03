@@ -457,7 +457,7 @@ class ServiceBreachRequest(BaseModel):
 def module_service_breaches(body: ServiceBreachRequest, request: Request):
     require_local_request(request)
     from app.security.security_plan import security_plan
-    from app.services.module_demo import demo_breaches
+    from app.services.breach_demo import demo_breaches
     unique = {}
     for service in body.services:
         item = service.model_dump()
@@ -483,11 +483,11 @@ def module_service_breaches(body: ServiceBreachRequest, request: Request):
             'note':'Public HIBP service history, not proof this person was affected. Your email address is not sent for this check.'}
 
 
-from app.monitoring.manager import MonitorManager
-from app.monitoring.router import create_monitor_router
+from app.monitoring.monitor_manager import MonitorManager
+from app.monitoring.api_routes import create_monitor_router
 monitor = MonitorManager(lambda: (gmail_credentials, gmail_connection_generation),
                          Path(__file__).resolve().parents[1] / 'data' / 'monitor.sqlite3')
 app.include_router(create_monitor_router(monitor, require_local_request))
 
-from app.monitoring.preferences import create_preferences_router
+from app.monitoring.review_actions_api import create_preferences_router
 app.include_router(create_preferences_router(monitor, require_local_request))

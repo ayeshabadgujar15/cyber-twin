@@ -17,3 +17,6 @@ node_modules/
 
 # Private monitoring registry and alert history
 data/
+
+# Local project reports, not application source
+reports/

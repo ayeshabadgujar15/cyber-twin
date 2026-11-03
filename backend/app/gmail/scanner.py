@@ -1,1 +1,0 @@
-"""Gmail scanning service placeholder."""

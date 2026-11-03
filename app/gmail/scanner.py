@@ -10,7 +10,7 @@ class GmailScanner:
     def scan_activity_emails(self, max_messages=5000, progress_callback=None):
         """Bounded metadata scan across all folders, with explicit coverage gaps."""
         if isinstance(max_messages, int) and not isinstance(max_messages, bool) and max_messages == 0:
-            from app.gmail.full_scan import scan_full_mailbox
+            from app.gmail.full_mailbox_scanner import scan_full_mailbox
             return scan_full_mailbox(self.service, self._decode_subject, progress_callback)
         if isinstance(max_messages, bool) or not isinstance(max_messages, int) or not 1 <= max_messages <= 10000:
             raise ValueError('max_messages must be between 1 and 10000')
