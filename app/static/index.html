@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light"><title>Cyber Twin · Account overview</title>
-  <link rel="stylesheet" href="/static/style.css?v=simple-connect-1"><script src="/static/workspace.js?v=simple-connect-1" defer></script><script src="/static/app.js?v=simple-connect-1" defer></script><script src="/static/migration-model.js?v=simple-connect-1" defer></script><script src="/static/migration.js?v=simple-connect-1" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=modules-1"><script src="/static/workspace.js?v=modules-1" defer></script><script src="/static/app.js?v=modules-1" defer></script><script src="/static/migration-model.js?v=modules-1" defer></script><script src="/static/migration.js?v=modules-1" defer></script>
+  <script src="/static/modules.js?v=modules-1" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to workspace</a>
@@ -11,35 +12,57 @@
   <a class="brand" href="/" aria-label="Cyber Twin home"><span class="brand-icon" aria-hidden="true">CT</span><span>Cyber Twin<small>Account overview</small></span></a>
 
   <nav aria-label="Main navigation">
-    <button class="nav-item selected" data-view="gmail"><span aria-hidden="true">▤</span> My accounts</button>
-    <button class="nav-item" data-view="migration">Move email</button>
-    <button class="nav-item" data-view="public"><span aria-hidden="true">◎</span> GitHub profile</button>
-    <button class="nav-item" data-view="guide"><span aria-hidden="true">?</span> Help &amp; setup</button>
-  </nav>
+    <button class="nav-item selected" data-view="gmail">1. Inbox &amp; services</button>
+    <button class="nav-item" data-view="breaches">2. Breach lookup</button>
+    <button class="nav-item" data-view="secure">3. Secure accounts</button>
+  </nav><button class="text-button" data-view="guide">Help &amp; setup</button>
   <div class="sidebar-note"><strong>You control each lookup.</strong><p>Mailbox metadata only.<br>No email bodies.<br>Optional HIBP check sends your connected address to HIBP.</p></div>
   <div class="sidebar-bottom"><span class="live-dot"></span> Local app<small>Single-user prototype</small><a href="/docs" target="_blank" rel="noopener">API documentation ↗</a></div>
 </aside>
 <main id="main-content">
   <header class="topbar"><span>Workspace <span class="slash">/</span> <strong id="breadcrumb">My accounts</strong></span><span class="local-badge">READ-ONLY GMAIL</span></header>
   <div class="page">
-    <section class="page-heading"><div class="eyebrow">ACCOUNT EVIDENCE</div><h1 id="page-title">Your digital footprint.</h1><p id="page-description">Discover accounts, review notifications, and understand the evidence in your mailbox.</p></section>
+    <section class="page-heading"><div class="eyebrow">ACCOUNT EVIDENCE</div><h1 id="page-title">1. Connect your inbox.</h1><p id="page-description">Connect your email, scan the mailbox and see the services you may have joined.</p></section>
+    <div id="message" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <section id="gmail-panel" class="view-panel">
       <div class="search-card scan-card">
-        <div class="scan-card-heading"><div><h2>Scan your mailbox</h2><p>Includes Spam and Trash. Sent mail and drafts are excluded.</p></div><button class="text-button" id="toggle-scan-controls" type="button" aria-expanded="true">Scan options</button></div>
-        <div class="connection-row"><span id="gmail-state">Checking connection…</span><button class="text-button" id="disconnect-gmail" type="button" hidden>Disconnect locally</button><a class="secondary" id="connect-gmail" href="/gmail/login?return_to_dashboard=true">Connect Gmail ↗</a></div>
-        <form id="gmail-form"><div class="form-row"><div class="field limit-field"><label for="message-limit">Message limit (0 = all)</label><input id="message-limit" type="number" value="500" min="0" max="10000" required></div><button class="primary" id="scan-button" type="submit">Start scan</button><button class="secondary" id="discover-button" type="button">Registration scan</button><button class="text-button" type="button" id="setup-help">Connection help</button></div></form>
-        <div class="scan-presets" aria-label="Choose scan depth"><span>Scan depth</span><button type="button" data-scan-limit="500" aria-pressed="true">Quick · 500</button><button type="button" data-scan-limit="2000" aria-pressed="false">Deeper · 2,000</button><button type="button" data-scan-limit="10000" aria-pressed="false">Broad · 10,000</button><button type="button" data-scan-limit="0" aria-pressed="false">Whole mailbox</button></div>
+        <div class="scan-card-heading"><div><h2>Connect your inbox</h2><p>Enter your email, connect securely with Google, then list services from your mailbox. Your password is entered only on Google’s page.</p></div><button class="text-button" id="toggle-scan-controls" type="button" aria-expanded="false">Scan options</button></div>
+        <div class="field"><label for="connection-email">Your Gmail address</label><input id="connection-email" type="email" maxlength="254" placeholder="you@gmail.com" autocomplete="email" required></div><div class="connection-row"><span id="gmail-state">Checking connection…</span><button class="text-button" id="disconnect-gmail" type="button" hidden>Disconnect locally</button><a class="secondary" id="connect-gmail" href="/gmail/login?return_to_dashboard=true">Connect &amp; scan ↗</a></div>
+        <form id="gmail-form"><div class="form-row"><div class="field limit-field"><label for="message-limit">Message limit (0 = all)</label><input id="message-limit" type="number" value="0" min="0" max="10000" required></div><button class="primary" id="scan-button" type="submit">Start scan</button><button class="secondary" id="discover-button" type="button">Registration-only scan</button><button class="text-button" type="button" id="setup-help">Connection help</button></div></form>
+        <div class="scan-presets" aria-label="Choose scan depth"><span>Scan depth</span><button type="button" data-scan-limit="500" aria-pressed="false">Quick · 500</button><button type="button" data-scan-limit="2000" aria-pressed="false">Deeper · 2,000</button><button type="button" data-scan-limit="10000" aria-pressed="false">Broad · 10,000</button><button type="button" data-scan-limit="0" aria-pressed="true">Whole mailbox</button></div>
         <p class="fineprint">Whole mailbox scans every page until Gmail reaches the end. Includes Spam and Trash; excludes Sent and Draft. Large scans take longer and use more memory.</p>
         <div class="demo-invitation"><span><strong>Try it before connecting.</strong> Fictional accounts, no mailbox access.</span><button class="text-button" id="demo-button" type="button">Explore demo ↗</button></div>
       </div>
-    </section>
-    <section class="optional-check search-card"><details><summary>Optional checks &amp; connection settings</summary><p>Check your connected Gmail address against Have I Been Pwned. This sends that address to HIBP and requires an API key.</p><button class="secondary" type="button" id="check-email-breaches">Check my email for breaches</button><button class="text-button" type="button" id="revoke-gmail">Revoke Google permission &amp; disconnect</button><div id="email-breach-results" role="status" aria-live="polite"></div></details></section>
+
+      <details class="module-extra"><summary>Connection controls</summary><button class="text-button" type="button" id="revoke-gmail">Revoke Google permission &amp; disconnect</button></details>
     <section id="scan-progress" class="scan-progress" aria-label="Mailbox scan progress" hidden><div class="progress-heading"><strong>Scanning metadata</strong><button class="text-button" id="cancel-scan" type="button">Cancel scan</button></div><progress id="scan-progress-meter" aria-label="Messages inspected toward the scan limit"></progress><p id="scan-progress-text" role="status" aria-live="polite">Starting…</p><small>A full mailbox can contain fewer messages than the selected limit. Cancellation takes effect between requests.</small></section>
-    <section id="public-panel" class="view-panel" hidden>
+
+      <section id="workspace-insights" aria-label="Your evidence overview" hidden></section>
+      <section id="all-activity" aria-label="Combined activity timeline" hidden></section>
+      <section id="results" aria-label="Discovered services" hidden></section>
+      <section id="empty-state" class="empty-state"><h2>Start with your inbox.</h2><p>Connect and scan, or explore the fictional demo. Whole-mailbox scanning is available; use Scan options for a smaller scan.</p></section>
+      <button id="continue-breaches" class="primary module-next" type="button" hidden>Continue to 2. Breach lookup →</button>
+      <details class="module-extra"><summary>Optional: public GitHub lookup</summary>
+    <section id="public-panel" >
       <form id="public-form" class="search-card"><h2>Inspect a GitHub profile</h2><p>Public profile dates and recent activity for a username you choose. This lookup checks GitHub only.</p><div class="form-row"><div class="field grow"><label for="username">GitHub username</label><input id="username" placeholder="Enter a username" required maxlength="50" autocomplete="off"></div><button class="primary" type="submit">Look up profile ↗</button></div><div class="examples">Example: <button type="button" data-example="github:octocat">octocat</button></div></form>
       <p class="info-strip">Public activity is not a complete login history. Profile locations are self-reported.</p>
+    <section id="public-results" aria-label="Public profile results" hidden></section></section>
+</details>
     </section>
-    <section id="migration-panel" class="view-panel" hidden>
+
+    <section id="breaches-panel" class="view-panel" hidden>
+      <div class="search-card"><h2>Check the services found in Module 1.</h2><p>See when a service was breached, what happened and what data was exposed. Service history does not prove that your own account was affected.</p><p id="breach-source" role="status" aria-live="polite"></p><button id="check-service-breaches" class="primary" type="button" disabled>Check service breaches</button></div>
+      <div id="service-breach-results"></div>
+    <section class="optional-check search-card"><details><summary>Optional checks &amp; connection settings</summary><p>Check your connected Gmail address against Have I Been Pwned. This sends that address to HIBP and requires an API key.</p><button class="secondary" type="button" id="check-email-breaches">Check my email for breaches</button><div id="email-breach-results" role="status" aria-live="polite"></div></details></section>
+
+      <button id="continue-security" class="primary module-next" type="button">Continue to 3. Secure accounts →</button>
+    </section>
+    <section id="secure-panel" class="view-panel" hidden>
+      <div class="search-card"><h2>Your next security steps.</h2><p>Follow these steps in the service’s official app or website. Cyber Twin never changes passwords or account settings for you. Checkmarks record your review on this page only.</p></div>
+      <div id="security-plan-results"></div>
+      <details class="module-extra" id="review-details"><summary>Mailbox review prompts: alerts, password events, billing and forgotten accounts</summary><section id="review-area" aria-label="Personal review queue" hidden></section></details>
+      <details class="module-extra"><summary>Optional: move away from an old email</summary>
+    <section id="migration-panel" >
       <div class="search-card">
         <h2>Retire an old email without losing track of accounts.</h2>
         <p>Example: moving from an old Gmail address to your new email? Build a checklist, update each service yourself, and tick it off here.</p>
@@ -55,6 +78,8 @@
       </div>
       <p id="migration-progress" role="status" aria-live="polite"></p><div id="migration-list"></div>
     </section>
+</details>
+    </section>
     <section id="guide-panel" class="view-panel" hidden>
       <div class="search-card guide"><h2>Connect Gmail in one click.</h2><p>Once the app is set up, click <strong>Connect Gmail</strong>, choose your Google account, and allow read-only Gmail access.</p>
         <details id="desktop-setup"><summary>One-time setup for this local app</summary><p>The Google Cloud project owner needs to enable Gmail API and download an OAuth client of type <strong>Desktop app</strong>. Choose that JSON file below. It stays on this computer; no callback URLs or port edits are needed for Desktop clients.</p><ol><li>Open Google Cloud → Google Auth Platform → Clients → Create client.</li><li>Choose <strong>Desktop app</strong>, create it and download its JSON file.</li><li>If the app is in Testing, add your Gmail address under Audience → Test users.</li></ol><p><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Open Google client settings ↗</a></p><form id="desktop-client-form"><label for="desktop-client-file">Google Desktop app JSON file</label><input id="desktop-client-file" type="file" accept=".json,application/json" required><button class="secondary" type="submit">Save one-time setup</button></form><p id="desktop-client-status" role="status" aria-live="polite"></p></details>
@@ -68,13 +93,8 @@
         <h3>Connection lifetime</h3><p>Restarting the server clears the connection. Google testing permissions may expire after seven days. “Disconnect locally” clears this app’s credentials, scan results and pending connection attempt; it does not revoke Google’s account permission.</p>
       </div></details>
     </section>
-    <div id="message" role="status" aria-live="polite" aria-atomic="true" hidden></div>
-    <section id="workspace-insights" aria-label="Your evidence overview" hidden></section>
-    <section id="review-area" aria-label="Personal review queue" hidden></section>
-    <section id="all-activity" aria-label="Combined activity timeline" hidden></section>
-    <section id="results" aria-label="Lookup results" hidden></section>
-    <section id="empty-state" class="empty-state"><h2>Start with your mailbox.</h2><p>Connect Gmail or open the demo to see what Cyber Twin can tell you.</p><div class="empty-use-cases"><div><strong>Account discovery</strong><span>Services mentioned in your emails.</span></div><div><strong>Security review</strong><span>Alerts and password events in context.</span></div><div><strong>Billing clues</strong><span>Receipts and renewal evidence.</span></div><div><strong>One timeline</strong><span>Dated evidence across your services.</span></div></div></section>
-    <footer><strong>Cyber Twin</strong><span>Mailbox evidence · Local single-user workspace</span></footer>
+
+    <footer><strong>Cyber Twin</strong><span>1. Discover services · 2. Check breaches · 3. Secure accounts</span></footer>
   </div>
 </main>
 </body>

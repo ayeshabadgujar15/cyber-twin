@@ -16,6 +16,7 @@ function clearWorkspace() {
   workspaceRecords = []; workspaceInsights = null; workspaceCoverage = null; workspaceDemo = false; currentResults = []; reviewedItems.clear(); document.body.classList.remove('has-workspace', 'show-scan-options');
   for (const id of ['workspace-insights', 'review-area', 'all-activity', 'results']) { $(id).replaceChildren(); $(id).hidden = true; }
   $('empty-state').hidden = false;
+  if (typeof resetModuleWorkflow === 'function') resetModuleWorkflow();
   showMessage('Results cleared from this page. Nothing was deleted from Gmail.');
 }
 function selectWorkspaceTab(tab) {
@@ -38,16 +39,16 @@ function renderWorkspace(records, coverage, insights, demo) {
   for (const [label, value, note, action] of [
     ['Services found', insights.service_count, 'Exact sender domains', () => selectWorkspaceTab('accounts')],
     ['Recent evidence', insights.recent_services, 'Within 90 days · not live activity', () => selectWorkspaceTab('accounts')],
-    ['Security alerts', insights.security_services, 'Alert/attempt wording · excludes OTPs', () => { reviewCategory = 'security'; selectWorkspaceTab('review'); }],
-    ['Billing clues', insights.billing_services, 'Receipts or renewal wording', () => { reviewCategory = 'billing'; selectWorkspaceTab('review'); }],
+    ['Security alerts', insights.security_services, 'Alert/attempt wording · excludes OTPs', () => { openSecurityReview('security'); }],
+    ['Billing clues', insights.billing_services, 'Receipts or renewal wording', () => { openSecurityReview('billing'); }],
   ]) { const button = workspaceButton('', action, 'overview-stat'); button.append(node('span', label, 'stat-label'), node('strong', String(value), 'stat-value'), node('small', note)); stats.append(button); }
   area.append(stats);
   const story = node('div', undefined, 'activity-story'); const intro = node('div'); intro.append(node('div', 'THE SHAPE OF YOUR EVIDENCE', 'eyebrow'), node('h3', 'Evidence by month.'), node('p', 'Classified notifications by UTC month, not time spent online. Select a month to explore its evidence.')); story.append(intro);
   const chart = node('div', undefined, 'month-chart'); chart.setAttribute('aria-label', 'Classified evidence over the last twelve months');
   const maximum = Math.max(1, ...insights.monthly_activity.map(month => month.evidence_count));
-  for (const month of insights.monthly_activity) { const label = new Date(month.month + '-01T12:00:00Z').toLocaleString(undefined, {month:'short', timeZone:'UTC'}); const button = workspaceButton('', () => { selectWorkspaceTab('timeline'); $('timeline-month').value = month.month; $('timeline-month').dispatchEvent(new Event('change')); }, 'month-column'); button.setAttribute('aria-label', month.month + ': ' + month.evidence_count + ' evidence records'); button.title = month.month + ' · ' + month.evidence_count + ' records'; const track = node('span', undefined, 'bar-track'); const bar = node('span', undefined, 'bar-fill'); bar.style.height = Math.max(3, month.evidence_count / maximum * 100) + '%'; if (!month.evidence_count) bar.className += ' empty-bar'; track.append(bar); button.append(node('small', String(month.evidence_count), 'bar-count'), track, node('small', label, 'month-label')); chart.append(button); } story.append(chart); area.append(story);
+  for (const month of insights.monthly_activity) { const label = new Date(month.month + '-01T12:00:00Z').toLocaleString(undefined, {month:'short', timeZone:'UTC'}); const button = workspaceButton('', () => { selectWorkspaceTab('timeline'); $('timeline-month').value = month.month; $('timeline-month').dispatchEvent(new Event('change')); }, 'month-column'); button.setAttribute('aria-label', month.month + ': ' + month.evidence_count + ' evidence records'); button.title = month.month + ' · ' + month.evidence_count + ' records'; const track = node('span', undefined, 'bar-track'); const bar = node('span', undefined, 'bar-fill'); bar.style.height = Math.max(3, month.evidence_count / maximum * 100) + '%'; if (!month.evidence_count) bar.className += ' empty-bar'; track.append(bar); button.append(node('small', String(month.evidence_count), 'bar-count'), track, node('small', label, 'month-label')); chart.append(button); } story.append(chart); const monthly = node('details', undefined, 'module-chart'); monthly.append(node('summary', 'Optional: monthly evidence chart'), story); area.append(monthly);
   const nav = node('div', undefined, 'workspace-tabs'); nav.setAttribute('aria-label', 'Explore your evidence');
-  for (const [tab, label] of [['accounts', 'My accounts'], ['review', 'Review queue · ' + insights.review_queue_total], ['timeline', 'All activity']]) { const button = workspaceButton(label, () => selectWorkspaceTab(tab), 'workspace-tab' + (tab === 'accounts' ? ' selected' : '')); button.dataset.workspaceTab = tab; button.setAttribute('aria-pressed', String(tab === 'accounts')); nav.append(button); } area.append(nav);
+  for (const [tab, label] of [['accounts', 'My accounts'], ['timeline', 'All activity']]) { const button = workspaceButton(label, () => selectWorkspaceTab(tab), 'workspace-tab' + (tab === 'accounts' ? ' selected' : '')); button.dataset.workspaceTab = tab; button.setAttribute('aria-pressed', String(tab === 'accounts')); nav.append(button); } area.append(nav);
   $('review-area').hidden = true; $('all-activity').hidden = true;
 }
 function renderReviewQueue() {
@@ -62,7 +63,7 @@ function renderReviewQueue() {
     const checked = reviewedItems.has(item.id); const card = node('article', undefined, 'review-card' + (checked ? ' reviewed' : ''));
     const top = node('div', undefined, 'review-card-heading'); top.append(node('span', categoryNames[item.category], 'review-kind ' + item.category), node('span', date(item.observed_at), 'subtle')); card.append(top);
     card.append(node('h3', item.title), node('p', item.service_name + ' · ' + item.domain, 'review-service'), node('p', item.explanation), node('div', item.suggested_action, 'suggested-action'));
-    const actions = node('div', undefined, 'review-actions'); const actionId = 'review-' + encodeURIComponent(item.id); const mark = workspaceButton(checked ? '✓ Reviewed this session · Undo' : 'Mark reviewed this session', () => { if (reviewedItems.has(item.id)) reviewedItems.delete(item.id); else reviewedItems.add(item.id); renderReviewQueue(); $(actionId).focus(); }, checked ? 'secondary' : 'primary'); mark.id = actionId; actions.append(mark, workspaceButton('See account evidence', () => { selectWorkspaceTab('accounts'); const filter = $('results').querySelector('input'); filter.value = item.domain; filter.dispatchEvent(new Event('input')); filter.focus({preventScroll:true}); $('results').scrollIntoView({behavior:'smooth', block:'start'}); }, 'text-button')); card.append(actions); area.append(card);
+    const actions = node('div', undefined, 'review-actions'); const actionId = 'review-' + encodeURIComponent(item.id); const mark = workspaceButton(checked ? '✓ Reviewed this session · Undo' : 'Mark reviewed this session', () => { if (reviewedItems.has(item.id)) reviewedItems.delete(item.id); else reviewedItems.add(item.id); renderReviewQueue(); $(actionId).focus(); }, checked ? 'secondary' : 'primary'); mark.id = actionId; actions.append(mark, workspaceButton('See account evidence', () => { document.querySelector('[data-view="gmail"]').click(); selectWorkspaceTab('accounts'); const filter = $('results').querySelector('input'); filter.value = item.domain; filter.dispatchEvent(new Event('input')); filter.focus({preventScroll:true}); $('results').scrollIntoView({behavior:'smooth', block:'start'}); }, 'text-button')); card.append(actions); area.append(card);
   }
   if (workspaceInsights.review_queue_truncated) area.append(node('p', 'Showing the first 1,000 prompts. Use account evidence to explore the remaining services.', 'evidence-note'));
 }
@@ -87,7 +88,7 @@ function renderCombinedTimeline() {
 }
 function hideWorkspacePanels() { for (const id of ['workspace-insights', 'review-area', 'all-activity']) $(id).hidden = true; }
 document.addEventListener('DOMContentLoaded', () => {
-  $('toggle-scan-controls').addEventListener('click', () => { const open = document.body.classList.toggle('show-scan-options'); $('toggle-scan-controls').setAttribute('aria-expanded', String(open || !document.body.classList.contains('has-workspace'))); });
+  $('toggle-scan-controls').addEventListener('click', () => { const open = document.body.classList.toggle('show-scan-options'); $('toggle-scan-controls').setAttribute('aria-expanded', String(open)); });
   $('demo-button').addEventListener('click', () => run(async () => { const data = await api('/accounts/activity-demo'); renderRecords(data.services, data.coverage, 'Example accounts', data.insights, true); }, 'Preparing fictional sample evidence…'));
   $('disconnect-gmail').addEventListener('click', () => run(async () => { await api('/gmail/disconnect', {method:'POST'}); clearWorkspace(); await refreshStatus(); }, 'Clearing the local Gmail connection…'));
   document.querySelectorAll('[data-scan-limit]').forEach(button => button.addEventListener('click', () => { $('message-limit').value = button.dataset.scanLimit; document.querySelectorAll('[data-scan-limit]').forEach(item => item.setAttribute('aria-pressed', String(item === button))); }));
@@ -132,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
       area.replaceChildren(node('p', data.note));
       if (data.status === 'checked') {
         area.append(node('p', data.email + ': ' + data.breaches.length + ' breach records returned.'));
-        for (const breach of data.breaches) area.append(node('p', breach.name + ' · ' + breach.breach_date + ' · ' + breach.data_exposed.join(', ')));
+        for (const breach of data.breaches) area.append(breachEvent(breach));
       }
     } catch (error) { area.replaceChildren(node('p', error.message)); }
     finally { button.disabled = false; }

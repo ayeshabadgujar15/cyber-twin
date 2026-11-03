@@ -20,7 +20,7 @@ import json
 import re
 from datetime import datetime, timezone
 from httplib2 import HttpLib2Error
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlencode
 from oauthlib.oauth2 import OAuth2Error
 from requests.exceptions import RequestException
 
@@ -287,7 +287,7 @@ def gmail_login(request: Request, return_to_dashboard: bool = False, email: str 
     # Keep the state cookie on the same host as the configured Google callback.
     canonical = urlsplit(setup['dashboard_url'])
     if request.url.netloc != canonical.netloc:
-        return RedirectResponse(setup['dashboard_url'] + 'gmail/login?return_to_dashboard=' + str(return_to_dashboard).lower(), status_code=307)
+        return RedirectResponse(setup['dashboard_url'] + 'gmail/login?' + urlencode({'return_to_dashboard':str(return_to_dashboard).lower(), **({'email':email} if email else {})}), status_code=307)
 
     oauth_return_to_dashboard = return_to_dashboard
     try:
@@ -435,3 +435,45 @@ async def setup_desktop_client(request: Request):
     clear_pending_flow()
     oauth_state, oauth_started_at, oauth_return_to_dashboard = None, 0, False
     return {'configured': True, 'message': 'One-time setup saved locally. Click Connect Gmail.'}
+
+
+class ModuleService(BaseModel):
+    domain: str = Field(min_length=3, max_length=253, pattern=r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$')
+    service_name: str = Field(default='', max_length=200)
+    security_alert: bool = False
+    password_event: bool = False
+
+
+class ServiceBreachRequest(BaseModel):
+    services: list[ModuleService] = Field(min_length=1, max_length=10000)
+    is_demo: bool = False
+
+
+@app.post('/accounts/service-breaches')
+def module_service_breaches(body: ServiceBreachRequest, request: Request):
+    require_local_request(request)
+    from app.security.security_plan import security_plan
+    from app.services.module_demo import demo_breaches
+    unique = {}
+    for service in body.services:
+        item = service.model_dump()
+        item['domain'] = item['domain'].lower()
+        unique.setdefault(item['domain'], item)
+    services = list(unique.values())
+    if body.is_demo:
+        # Only the fixed fictional fixture may enter demo mode; never real domains.
+        if any(not item['domain'].endswith('.example') for item in services):
+            raise HTTPException(422, 'Demo mode accepts only fictional .example services.')
+        return demo_breaches(services)
+    try:
+        found = BreachChecker().check_breaches([item['domain'] for item in services])
+        if len(found) != len(services):
+            raise ValueError('Incomplete service catalogue result')
+    except (URLError, OSError, ValueError, KeyError, TypeError):
+        checks = [{**item, 'status':'unavailable', 'known_breach':None, 'breaches':[],
+                   'note':'Breach provider unavailable. Retry later; these services have not been cleared.'} for item in services]
+    else:
+        checks = [{**item, **check, 'status':'checked'} for item,check in zip(services,found)]
+    return {'checks':checks, 'security_plan':security_plan(services,checks), 'is_demo':False,
+            'checked_at':datetime.now(timezone.utc).isoformat(),
+            'note':'Public HIBP service history, not proof this person was affected. Your email address is not sent for this check.'}

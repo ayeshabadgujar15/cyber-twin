@@ -137,3 +137,38 @@ the app cannot create clients or approve test users on the owner's behalf.
 Credentials remain memory-only, so a server restart still requires reconnecting.
 Since migration checklists use browser origin storage, a different selected
 port has separate checklist storage; export important checklists before moving.
+
+
+## Three functional modules
+
+1. **Inbox & services:** enter an email → authorize Gmail on Google's own page
+   → scan mailbox metadata → list service clues. Whole-mailbox mode is the
+   default (0); bounded scans remain available. Includes Spam/Trash and excludes
+   Sent/Draft. Existing evidence timelines, activity indicators, fictional demo,
+   progress/cancellation and registration-only search belong here. Public GitHub
+   lookup is an optional discovery tool. Live mailbox connections support Gmail;
+   entering an Outlook/Yahoo address does not add those providers.
+2. **Breach lookup:** check the Module 1 list against HIBP's public catalogue.
+   Show incident date/year, plain-text description, exposed data classes,
+   affected record count, verification status, catalogue-added/updated dates and
+   source. Exact and dot-delimited parent-domain matches are labelled; sender
+   authenticity, ownership and personal exposure remain unverified. Fabricated,
+   spam-list and malware/stealer records are excluded from service incidents;
+   unverified reports are included and labelled. Optional connected-email HIBP
+   lookup is here and still requires its own provider key and explicit action.
+3. **Secure accounts:** prioritized, user-performed password, MFA/passkey,
+   session, recovery and phishing-review steps based on service breach history
+   and mailbox signals. If lookup failed or was not done, show general guidance
+   without claiming a clean result. Existing review prompts and the saved
+   old-email migration checklist are optional sections in this module.
+
+Service checks download the public catalogue once and match domains locally;
+they do not send the user's email to HIBP. Dates are reported incident dates,
+not guaranteed discovery dates. Missing catalogue entries do not prove safety.
+Fictional demo service checks never contact a provider. Security checkmarks are
+page-only self-reports, not evidence that an account has been secured.
+
+Remaining API-only discovery/research adapters: Chess.com, Gravatar, IntelBase
+(Module 1 support) and manual place analysis (research helper, outside the main
+three-stage workflow). They are not invoked automatically. Startup/OAuth setup,
+disconnect and developer API docs are shared support features.
