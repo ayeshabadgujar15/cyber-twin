@@ -83,3 +83,29 @@ are historical; this README describes the merged behavior.
 are excluded. Existing local-only artifacts are preserved outside version
 control. GitHub history preserves the earlier implementation; the working tree
 contains one integrated app. `backend/` remains legacy scaffolding.
+
+
+## Old-email migration checklist
+
+Open **Move email**, enter the address you want to retire, and open a checklist.
+For Gmail, connect that old address and run a scan under **My accounts**. Return
+to **Move email** and add accounts from the loaded scan. Imports are enabled
+only when the scan's verified Gmail identity matches the selected old address.
+Demo/public-profile results cannot be imported. You can manually add services
+for any email provider, including accounts absent from scan evidence.
+
+Mark accounts **Essential** or **Other** and **Pending** or **Updated**. Reimport
+adds newly found domains without resetting decisions. Updated is a user report,
+not independently verified. Cyber Twin never changes service account settings.
+Use official apps/bookmarks to change sign-in/recovery details and verify access.
+
+Migration email addresses, domains and checklist decisions are stored in browser
+localStorage for this origin/device, separately from transient mailbox results.
+They survive reload/restart and Gmail disconnect, but clearing browser site data
+removes them. Other browsers/ports do not share them. Export a JSON backup or
+delete individual checklists in the UI. Exports contain the old email and service
+list; keep them private. This feature does not add a general saved inventory or
+account-closure tracker. No raw emails, credentials or timelines are persisted.
+
+Additional checks: `node test_migration.cjs` and
+`node --check app/static/migration.js`.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light"><title>Cyber Twin · Account overview</title>
-  <link rel="stylesheet" href="/static/style.css"><script src="/static/workspace.js" defer></script><script src="/static/app.js" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=migration-1"><script src="/static/workspace.js?v=migration-1" defer></script><script src="/static/app.js?v=migration-1" defer></script><script src="/static/migration-model.js?v=migration-1" defer></script><script src="/static/migration.js?v=migration-1" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to workspace</a>
@@ -12,6 +12,7 @@
 
   <nav aria-label="Main navigation">
     <button class="nav-item selected" data-view="gmail"><span aria-hidden="true">▤</span> My accounts</button>
+    <button class="nav-item" data-view="migration">Move email</button>
     <button class="nav-item" data-view="public"><span aria-hidden="true">◎</span> GitHub profile</button>
     <button class="nav-item" data-view="guide"><span aria-hidden="true">?</span> Help &amp; setup</button>
   </nav>
@@ -37,6 +38,22 @@
     <section id="public-panel" class="view-panel" hidden>
       <form id="public-form" class="search-card"><h2>Inspect a GitHub profile</h2><p>Public profile dates and recent activity for a username you choose. This lookup checks GitHub only.</p><div class="form-row"><div class="field grow"><label for="username">GitHub username</label><input id="username" placeholder="Enter a username" required maxlength="50" autocomplete="off"></div><button class="primary" type="submit">Look up profile ↗</button></div><div class="examples">Example: <button type="button" data-example="github:octocat">octocat</button></div></form>
       <p class="info-strip">Public activity is not a complete login history. Profile locations are self-reported.</p>
+    </section>
+    <section id="migration-panel" class="view-panel" hidden>
+      <div class="search-card">
+        <h2>Retire an old email without losing track of accounts.</h2>
+        <p>Example: moving from an old Gmail address to your new email? Build a checklist, update each service yourself, and tick it off here.</p>
+        <form id="migration-form" class="form-row"><div class="field grow"><label for="migration-email">Old email you want to retire</label><input id="migration-email" type="email" maxlength="254" placeholder="old-address@example.com" required></div><button class="primary" type="submit">Open checklist</button></form>
+        <p class="evidence-note">Only checklist decisions are saved in this browser on this device. Clearing site data removes them; export a copy to keep a backup. No passwords or email contents are saved here.</p>
+      </div>
+      <div class="migration-heading"><h2 id="migration-heading"></h2><select id="migration-picker" aria-label="Choose an old-email checklist" hidden></select></div>
+      <div id="migration-actions" hidden>
+        <p class="coverage">Open each service through its official app or a trusted bookmark. Change its sign-in and recovery email, verify the new address, and test access before marking it updated. Keep access to your old inbox until you have checked essential accounts. Missing mailbox evidence can leave accounts out.</p>
+        <p id="migration-import-note" class="evidence-note"></p><button id="migration-import" class="secondary" type="button">Add accounts from loaded scan</button>
+        <details class="migration-manual"><summary>Add an account manually</summary><form id="migration-manual-form" class="form-row"><div class="field grow"><label for="migration-domain">Service domain</label><input id="migration-domain" placeholder="example.com" maxlength="253" required></div><button class="secondary" type="submit">Add service</button></form></details>
+        <div class="result-toolbar"><select id="migration-filter" aria-label="Migration status filter"><option value="">All accounts</option><option value="pending">Pending</option><option value="updated">Updated</option></select><button id="migration-export" type="button" class="text-button">Export checklist</button><button id="migration-delete" type="button" class="text-button">Delete checklist</button></div>
+      </div>
+      <p id="migration-progress" role="status" aria-live="polite"></p><div id="migration-list"></div>
     </section>
     <section id="guide-panel" class="view-panel" hidden>
       <div class="search-card guide"><h2>Connect Gmail</h2><p id="setup-state">Checking local Google settings…</p>

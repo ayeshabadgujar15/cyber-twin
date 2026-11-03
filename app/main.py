@@ -158,7 +158,7 @@ def start_activity_scan(request: Request, max_messages: int = Query(default=500,
         key = scan_jobs.start(owner, task, max_messages)
     except RuntimeError as error:
         raise HTTPException(409, str(error)) from None
-    return {'scan_id': key, 'status': 'queued', 'result_retention_seconds': scan_jobs.ttl}
+    return {'scan_id': key, 'status': 'queued', 'result_retention_seconds': scan_jobs.ttl, 'connection_generation': gmail_connection_generation}
 
 
 @app.get('/accounts/activity/scans/{scan_id}')
@@ -387,3 +387,18 @@ def connected_email_breaches(request: Request):
         raise HTTPException(502, 'HIBP lookup was unavailable. Check your API key and try later.') from None
     return {'status': 'checked', **result,
             'note': 'Only breaches returned by HIBP; no match does not establish that your account is safe.'}
+
+
+@app.get('/gmail/identity')
+def gmail_identity():
+    scan_owner()
+    credentials, generation = gmail_credentials, gmail_connection_generation
+    try:
+        email = GmailScanner(credentials).get_email_address()
+    except (HttpError, GoogleAuthError, HttpLib2Error, OSError, ValueError) as error:
+        raise gmail_scan_error(error) from None
+    if credentials is not gmail_credentials or generation != gmail_connection_generation:
+        raise HTTPException(409, 'Gmail connection changed. Start the scan again.')
+    if not isinstance(email, str) or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', email):
+        raise HTTPException(502, 'Gmail did not return a valid mailbox identity.')
+    return {'email': email, 'connection_generation': generation}

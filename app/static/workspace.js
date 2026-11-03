@@ -99,6 +99,8 @@ async function runMailboxScan() {
   panel.hidden = false; $('cancel-scan').disabled = false; $('scan-progress-meter').removeAttribute('value');
   $('scan-progress-text').textContent = 'Starting a read-only scan…'; cancelScanRequested = false;
   try {
+    let source = null;
+    try { source = await api('/gmail/identity'); } catch { /* The scan still works; migration import requires verified identity. */ }
     const job = await api('/accounts/activity/scans?max_messages=' + encodeURIComponent($('message-limit').value), {method:'POST'});
     activeScanId = job.scan_id;
     while (true) {
@@ -107,7 +109,7 @@ async function runMailboxScan() {
       const progress = state.progress || {}; const fetched = progress.message_fetches || 0;
       if (progress.message_limit) { $('scan-progress-meter').max = progress.message_limit; $('scan-progress-meter').value = fetched; } else { $('scan-progress-meter').removeAttribute('value'); }
       $('scan-progress-text').textContent = fetched + ' messages inspected · ' + (progress.messages_scanned || 0) + ' received messages · ' + Math.floor((Date.now() - startedAt) / 1000) + 's elapsed';
-      if (state.status === 'completed') { const data = state.result; renderRecords(data.services, data.coverage, 'Your account evidence', data.insights, false); await api('/accounts/activity/scans/' + activeScanId, {method:'DELETE'}); break; }
+      if (state.status === 'completed') { const data = state.result; if (source && source.connection_generation === job.connection_generation) data.coverage.mailbox_email = source.email; renderRecords(data.services, data.coverage, 'Your account evidence', data.insights, false); await api('/accounts/activity/scans/' + activeScanId, {method:'DELETE'}); break; }
       if (state.status === 'cancelled') { $('scan-progress-text').textContent = 'Scan cancelled. Partial results were discarded.'; return {notice:'Scan cancelled. No partial results were kept.'}; }
       if (state.status === 'failed') throw new Error(state.error?.detail || 'Scan failed. Try reconnecting Gmail.');
       if (state.status === 'cancelling') $('scan-progress-text').textContent += ' · stopping after the current request';
