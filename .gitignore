@@ -1,0 +1,16 @@
+# Private settings and generated files
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.db
+*.sqlite*
+tmp/
+output/
+practical-tools/installers/
+practical-tools/volatility3/
+node_modules/

@@ -62,7 +62,7 @@ class BreachChecker:
             raise ValueError("Provide an email address.")
 
         request = Request(
-            f"{HIBP_API}/breachedaccount/{quote(email)}?truncateResponse=false",
+            f"{HIBP_API}/breachedaccount/{quote(email, safe='')}?truncateResponse=false",
             headers={"User-Agent": USER_AGENT, "hibp-api-key": api_key},
         )
 

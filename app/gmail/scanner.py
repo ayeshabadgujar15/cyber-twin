@@ -1,26 +1,101 @@
-import time
 from email.utils import parseaddr
-
+from email.header import decode_header, make_header
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-# Gmail allows 250 quota units per user per second and messages.get costs 5,
-# so 50 requests per batch keeps each batch within one second's quota.
-BATCH_SIZE = 50
-LIST_PAGE_SIZE = 500
-MAX_RETRIES = 6
-RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
+from google_auth_httplib2 import AuthorizedHttp
+from httplib2 import Http
 
 
 class GmailScanner:
+    def scan_activity_emails(self, max_messages=5000, progress_callback=None):
+        """Bounded metadata scan across all folders, with explicit coverage gaps."""
+        if isinstance(max_messages, int) and not isinstance(max_messages, bool) and max_messages == 0:
+            from app.gmail.full_scan import scan_full_mailbox
+            return scan_full_mailbox(self.service, self._decode_subject, progress_callback)
+        if isinstance(max_messages, bool) or not isinstance(max_messages, int) or not 1 <= max_messages <= 10000:
+            raise ValueError('max_messages must be between 1 and 10000')
+        messages, seen_ids, seen_tokens = [], set(), set()
+        page_token = None
+        pages_scanned = unavailable = excluded = 0
+        def report():
+            if progress_callback:
+                progress_callback({'message_fetches': len(seen_ids), 'messages_scanned': len(messages),
+                                   'message_limit': max_messages, 'pages_scanned': pages_scanned,
+                                   'unavailable_messages': unavailable, 'excluded_sent_or_draft': excluded})
+        report()
+        while True:
+            pages_scanned += 1
+            report()
+            response = self.service.users().messages().list(
+                userId='me', includeSpamTrash=True,
+                maxResults=min(500, max_messages - len(seen_ids)),
+                fields='messages/id,nextPageToken',
+                **({'pageToken': page_token} if page_token else {}),
+            ).execute(num_retries=2)
+            truncated_page = False
+            for item in response.get('messages', []):
+                message_id = item['id']
+                if message_id in seen_ids:
+                    continue
+                if len(seen_ids) >= max_messages:
+                    truncated_page = True
+                    break
+                seen_ids.add(message_id)
+                report()
+                try:
+                    message = self.service.users().messages().get(
+                        userId='me', id=message_id, format='metadata',
+                        metadataHeaders=['From', 'Subject', 'Date'],
+                        fields='internalDate,labelIds,payload/headers',
+                    ).execute(num_retries=2)
+                except HttpError as error:
+                    if error.resp.status != 404:
+                        raise
+                    unavailable += 1  # Deleted between list and get; no content retained.
+                    report()
+                    continue
+                if {'SENT', 'DRAFT'}.intersection(message.get('labelIds', [])):
+                    excluded += 1
+                    report()
+                    continue
+                headers = {h['name'].lower(): h['value'] for h in message.get('payload', {}).get('headers', [])}
+                _, sender = parseaddr(headers.get('from', ''))
+                messages.append({
+                    'message_id': message_id,
+                    'sender_domain': sender.rsplit('@', 1)[-1].lower() if '@' in sender else '',
+                    'subject': self._decode_subject(headers.get('subject', '')),
+                    'date': headers.get('date', ''),
+                    'internal_date': message.get('internalDate'),
+                })
+                report()
+            page_token = response.get('nextPageToken')
+            if not page_token or len(seen_ids) >= max_messages or pages_scanned >= max_messages:
+                exhausted = not bool(page_token) and not truncated_page
+                reason = ('mailbox_end' if exhausted else
+                          'message_limit' if len(seen_ids) >= max_messages else 'page_limit')
+                return messages, {
+                    'messages_scanned': len(messages), 'message_fetches': len(seen_ids),
+                    'scan_complete': exhausted and unavailable == 0,
+                    'message_limit': max_messages, 'pages_scanned': pages_scanned,
+                    'unavailable_messages': unavailable, 'excluded_sent_or_draft': excluded,
+                    'stop_reason': reason,
+                }
+            if page_token in seen_tokens:
+                raise ValueError('Gmail returned a repeated pagination token')
+            seen_tokens.add(page_token)
+
+    @staticmethod
+    def _decode_subject(subject):
+        try:
+            return str(make_header(decode_header(subject)))
+        except (LookupError, UnicodeError, ValueError):
+            return subject
+
     def __init__(self, credentials):
-        self.service = build(
-            "gmail", "v1", credentials=credentials, cache_discovery=False
-        )
+        self.service = build("gmail", "v1", http=AuthorizedHttp(credentials, http=Http(timeout=30)))
 
     def get_email_address(self):
-        profile = self.service.users().getProfile(userId="me").execute()
-        return profile["emailAddress"]
+        return self.service.users().getProfile(userId='me').execute(num_retries=2)['emailAddress']
 
     def scan_registration_emails(self):
         queries = [
@@ -82,122 +157,3 @@ class GmailScanner:
                 })
 
         return results
-
-    def scan_inbox(self, on_progress=None):
-        """Read the sender, subject and date of every message in the mailbox.
-
-        Spam and trash are skipped and message bodies are never requested.
-        on_progress(phase, done, total) is called as the scan advances;
-        phase is "listing" while message IDs are collected (total is None),
-        then "reading" while headers are fetched.
-        """
-        report = on_progress or (lambda phase, done, total: None)
-
-        message_ids = self._list_message_ids(report)
-        total = len(message_ids)
-        report("reading", 0, total)
-
-        results = []
-        for start in range(0, total, BATCH_SIZE):
-            chunk = message_ids[start:start + BATCH_SIZE]
-            for message in self._fetch_metadata(chunk):
-                results.append(self._parse_message(message))
-            report("reading", min(start + BATCH_SIZE, total), total)
-
-        return results
-
-    def _list_message_ids(self, report):
-        message_ids = []
-        page_token = None
-
-        while True:
-            response = self.service.users().messages().list(
-                userId="me",
-                maxResults=LIST_PAGE_SIZE,
-                pageToken=page_token,
-                includeSpamTrash=False,
-            ).execute()
-
-            message_ids.extend(
-                item["id"] for item in response.get("messages", [])
-            )
-            report("listing", len(message_ids), None)
-
-            page_token = response.get("nextPageToken")
-            if not page_token:
-                return message_ids
-
-    def _fetch_metadata(self, message_ids):
-        messages = []
-        pending = list(message_ids)
-
-        for attempt in range(MAX_RETRIES + 1):
-            retry = []
-            errors = []
-
-            def handle(request_id, response, exception):
-                if exception is None:
-                    messages.append(response)
-                elif _is_retryable(exception):
-                    retry.append(request_id)
-                elif _status(exception) == 404:
-                    pass  # Deleted while the scan was running.
-                else:
-                    errors.append(exception)
-
-            batch = self.service.new_batch_http_request(callback=handle)
-            for message_id in pending:
-                batch.add(
-                    self.service.users().messages().get(
-                        userId="me",
-                        id=message_id,
-                        format="metadata",
-                        metadataHeaders=["From", "Subject", "Date"],
-                    ),
-                    request_id=message_id,
-                )
-            batch.execute()
-
-            if errors:
-                raise errors[0]
-            if not retry:
-                return messages
-
-            pending = retry
-            time.sleep(min(2 ** attempt, 32))
-
-        raise RuntimeError("Gmail kept rate-limiting the scan. Try again later.")
-
-    def _parse_message(self, message):
-        headers = {
-            h["name"].lower(): h["value"]
-            for h in message.get("payload", {}).get("headers", [])
-        }
-
-        sender_name, sender_email = parseaddr(headers.get("from", ""))
-
-        domain = ""
-        if "@" in sender_email:
-            domain = sender_email.split("@")[-1].lower()
-
-        return {
-            "sender_name": sender_name,
-            "sender_email": sender_email,
-            "sender_domain": domain,
-            "subject": headers.get("subject", ""),
-            "date": headers.get("date", ""),
-        }
-
-
-def _status(exception):
-    if isinstance(exception, HttpError):
-        return exception.resp.status
-    return None
-
-
-def _is_retryable(exception):
-    status = _status(exception)
-    if status in RETRYABLE_STATUSES:
-        return True
-    # Gmail reports per-user rate limits as 403 with a rateLimitExceeded reason.
-    return status == 403 and b"ateLimitExceeded" in (exception.content or b"")

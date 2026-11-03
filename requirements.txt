@@ -1,6 +1,11 @@
-fastapi
+fastapi>=0.115,<1
+pydantic>=2,<3
+requests>=2,<3
+oauthlib>=3,<4
+httplib2>=0.22,<1
 uvicorn
 google-auth
 google-auth-oauthlib
 google-api-python-client
 python-dotenv
+google-auth-httplib2
