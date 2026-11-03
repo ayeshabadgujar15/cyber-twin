@@ -24,7 +24,7 @@ from urllib.parse import urlsplit
 from oauthlib.oauth2 import OAuth2Error
 from requests.exceptions import RequestException
 
-from app.gmail.oauth import get_authorization_url, fetch_credentials, setup_status, OAuthConfigurationError, revoke_credentials
+from app.gmail.oauth import get_authorization_url, fetch_credentials, setup_status, OAuthConfigurationError, revoke_credentials, cookie_path, clear_pending_flow
 from app.gmail.scanner import GmailScanner
 from app.services.account_discovery import AccountDiscoveryService
 from app.security.breach_checker import BreachChecker
@@ -111,10 +111,11 @@ def disconnect_gmail(request: Request, revoke: bool = False):
         except (URLError, OSError):
             raise HTTPException(502, 'Google permission could not be revoked. Retry, or disconnect locally.') from None
     gmail_credentials = None
+    clear_pending_flow()
     scan_jobs.clear()
     oauth_state, oauth_started_at, oauth_return_to_dashboard = None, 0, False
     response = JSONResponse({'gmail_connected': False, 'message': 'Google permission revoked and local connection cleared.' if revoke else 'Local Gmail connection cleared. Google account permission is unchanged.'})
-    response.delete_cookie('cybertwin_oauth_state', path='/gmail')
+    response.delete_cookie('cybertwin_oauth_state', path=cookie_path())
     return response
 
 
@@ -245,7 +246,10 @@ def service_activity(domain: str, max_messages: int = Query(default=5000, ge=1, 
 
 
 @app.get("/")
-def dashboard():
+def dashboard(request: Request):
+    if os.getenv('GOOGLE_CLIENT_TYPE', 'web') == 'desktop' and any(key in request.query_params for key in ('code', 'state', 'error')):
+        return gmail_callback(code=request.query_params.get('code'), state=request.query_params.get('state'),
+                              error=request.query_params.get('error'), cybertwin_oauth_state=request.cookies.get('cybertwin_oauth_state'))
     return FileResponse(STATIC_DIR / 'index.html')
 
 
@@ -292,7 +296,7 @@ def gmail_login(request: Request, return_to_dashboard: bool = False, email: str 
         raise HTTPException(503, 'Google configuration could not be loaded. Check the Gmail setup guide.') from None
     oauth_started_at = time.monotonic()
     response = RedirectResponse(authorization_url)
-    response.set_cookie('cybertwin_oauth_state', oauth_state, httponly=True, samesite='lax', max_age=600, path='/gmail')
+    response.set_cookie('cybertwin_oauth_state', oauth_state, httponly=True, samesite='lax', max_age=600, path=cookie_path())
     return response
 
 
@@ -308,6 +312,7 @@ def gmail_callback(code: str | None = None, state: str | None = None, error: str
     dashboard = oauth_return_to_dashboard
     oauth_state, oauth_started_at, oauth_return_to_dashboard = None, 0, False
     if error or not code:
+        clear_pending_flow()
         response = (RedirectResponse('/?gmail_error=access_denied', status_code=303) if dashboard else
                     JSONResponse(status_code=403, content={'detail': 'Google did not grant access. If the app is in Testing, add this Gmail account under Google Auth Platform → Audience → Test users, then reconnect.'}))
     else:
@@ -322,7 +327,7 @@ def gmail_callback(code: str | None = None, state: str | None = None, error: str
         else:
             response = (RedirectResponse('/?gmail=connected', status_code=303) if dashboard else
                         JSONResponse({'message': 'Gmail connected successfully'}))
-    response.delete_cookie('cybertwin_oauth_state', path='/gmail')
+    response.delete_cookie('cybertwin_oauth_state', path=cookie_path())
     return response
 
 
@@ -402,3 +407,31 @@ def gmail_identity():
     if not isinstance(email, str) or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', email):
         raise HTTPException(502, 'Gmail did not return a valid mailbox identity.')
     return {'email': email, 'connection_generation': generation}
+
+
+@app.post('/gmail/setup-client')
+async def setup_desktop_client(request: Request):
+    global oauth_state, oauth_started_at, oauth_return_to_dashboard
+    require_local_request(request)
+    if request.url.hostname not in {'localhost', '127.0.0.1'}:
+        raise HTTPException(403, 'Use the local Cyber Twin dashboard.')
+    if gmail_credentials is not None:
+        raise HTTPException(409, 'Disconnect Gmail before replacing the app connection settings.')
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw.extend(chunk)
+        if len(raw) > 100_000:
+            raise HTTPException(413, 'Choose the small Google Desktop client JSON file.')
+    from app.gmail.client_setup import import_desktop_client
+    try:
+        payload = json.loads(raw)
+        import_desktop_client(payload)
+    except (ValueError, TypeError) as error:
+        # JSON parser errors may include file contents; never echo those.
+        detail = 'Choose a valid Google Desktop client JSON file.' if isinstance(error, json.JSONDecodeError) else str(error)
+        raise HTTPException(422, detail) from None
+    except OSError:
+        raise HTTPException(500, 'The app could not save local connection settings. Check folder write access.') from None
+    clear_pending_flow()
+    oauth_state, oauth_started_at, oauth_return_to_dashboard = None, 0, False
+    return {'configured': True, 'message': 'One-time setup saved locally. Click Connect Gmail.'}

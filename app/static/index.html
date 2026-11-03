@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light"><title>Cyber Twin · Account overview</title>
-  <link rel="stylesheet" href="/static/style.css?v=migration-1"><script src="/static/workspace.js?v=migration-1" defer></script><script src="/static/app.js?v=migration-1" defer></script><script src="/static/migration-model.js?v=migration-1" defer></script><script src="/static/migration.js?v=migration-1" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=simple-connect-1"><script src="/static/workspace.js?v=simple-connect-1" defer></script><script src="/static/app.js?v=simple-connect-1" defer></script><script src="/static/migration-model.js?v=simple-connect-1" defer></script><script src="/static/migration.js?v=simple-connect-1" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to workspace</a>
@@ -56,14 +56,17 @@
       <p id="migration-progress" role="status" aria-live="polite"></p><div id="migration-list"></div>
     </section>
     <section id="guide-panel" class="view-panel" hidden>
-      <div class="search-card guide"><h2>Connect Gmail</h2><p id="setup-state">Checking local Google settings…</p>
+      <div class="search-card guide"><h2>Connect Gmail in one click.</h2><p>Once the app is set up, click <strong>Connect Gmail</strong>, choose your Google account, and allow read-only Gmail access.</p>
+        <details id="desktop-setup"><summary>One-time setup for this local app</summary><p>The Google Cloud project owner needs to enable Gmail API and download an OAuth client of type <strong>Desktop app</strong>. Choose that JSON file below. It stays on this computer; no callback URLs or port edits are needed for Desktop clients.</p><ol><li>Open Google Cloud → Google Auth Platform → Clients → Create client.</li><li>Choose <strong>Desktop app</strong>, create it and download its JSON file.</li><li>If the app is in Testing, add your Gmail address under Audience → Test users.</li></ol><p><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Open Google client settings ↗</a></p><form id="desktop-client-form"><label for="desktop-client-file">Google Desktop app JSON file</label><input id="desktop-client-file" type="file" accept=".json,application/json" required><button class="secondary" type="submit">Save one-time setup</button></form><p id="desktop-client-status" role="status" aria-live="polite"></p></details>
+      </div>
+      <details class="search-card guide advanced-setup"><summary>Advanced setup &amp; evidence limitations</summary><div class="guide"><h2>Connect Gmail</h2><p id="setup-state">Checking local Google settings…</p>
         <div class="coverage partial"><strong>Google shows “Access blocked”?</strong><p>In the Cloud project that owns this OAuth client, open <strong>Google Auth Platform → Audience → Test users</strong>. Add the exact Gmail address you want to connect, save, and try again.</p><a id="audience-link" class="secondary" href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener noreferrer">Open test-user settings ↗</a></div>
         <h3>Setup checklist</h3><ol><li>Enable <strong>Gmail API</strong> in the same Cloud project.</li><li>In Google Auth Platform → Clients, register the exact callback URL: <strong id="callback-url">the configured callback</strong>.</li><li>Keep the app in Testing for local development and add your Gmail account as a test user.</li><li>Open <a id="canonical-dashboard" href="/">the configured local dashboard</a>, connect Gmail in your browser, and grant read-only access.</li></ol>
         <h3>Understand the evidence</h3><p>Dates come from email metadata. A subject may describe an account creation, login, security, password, or billing event. It does not verify ownership, a successful session, a charge, or a current subscription. OTPs and failed attempts never count as confirmed logins.</p>
         <h3>Review accounts safely</h3><p>Open a service using its app or a saved bookmark. Check security activity and recovery settings there. Cyber Twin does not follow email links, change passwords, cancel subscriptions, or close accounts.</p><p><a href="https://support.google.com/accounts/answer/140921" target="_blank" rel="noopener noreferrer">Google: investigate suspicious account activity ↗</a> · <a href="https://support.google.com/accounts/answer/185839" target="_blank" rel="noopener noreferrer">Google: two-step verification ↗</a></p>
         <h3>Coverage and privacy</h3><p>Mailbox limits, deleted messages and unsupported wording can leave gaps. Missing email is not proof of inactivity. Results are normalized metadata held in memory. Background results expire after ten minutes and are cleared after the dashboard receives them. Your review marks stay in this page only.</p>
         <h3>Connection lifetime</h3><p>Restarting the server clears the connection. Google testing permissions may expire after seven days. “Disconnect locally” clears this app’s credentials, scan results and pending connection attempt; it does not revoke Google’s account permission.</p>
-      </div>
+      </div></details>
     </section>
     <div id="message" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <section id="workspace-insights" aria-label="Your evidence overview" hidden></section>

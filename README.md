@@ -9,12 +9,12 @@ Requires Python 3.10+ and Node.js only for the JavaScript checks.
 
 ```powershell
 python -m pip install -r requirements.txt
-Copy-Item .env.example .env  # first setup only; do not overwrite existing credentials
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python run.py
 ```
 
-Open http://localhost:8000/. Configure the Google OAuth client in `.env` and use
-the exact localhost callback. Enable Gmail API and add your Google test user.
+Or double-click **Start Cyber Twin.cmd** after installing dependencies once.
+The launcher opens the app on an available local port. Use **Help & setup** to
+import a Google Desktop app client once. Existing `.env` web clients remain supported.
 The older `/app` URL redirects to the unified dashboard.
 
 ## Functional modules
@@ -109,3 +109,31 @@ account-closure tracker. No raw emails, credentials or timelines are persisted.
 
 Additional checks: `node test_migration.cjs` and
 `node --check app/static/migration.js`.
+
+
+## Simple startup and Gmail connection
+
+Double-click **Start Cyber Twin.cmd**, or run `python run.py`. The launcher binds
+a working local port before starting the server and opens the browser after
+the app is ready. If Windows blocks port 8000, it tries other local ports;
+there is no need to run as administrator or disable firewall protections.
+
+For port-independent Gmail connection, the Google Cloud project owner performs
+one setup: enable Gmail API, create a **Desktop app** OAuth client, download its
+JSON, then import it under **Help & setup → One-time setup**. If the consent app
+is in Testing, the Gmail address must be a test user. Imported settings are
+written only to the ignored local `.env`; prior settings are backed up in
+`.env.before-desktop`. File-supplied network endpoints are ignored.
+
+After that, use **Connect Gmail → choose account → Allow**. Desktop mode uses
+the launcher's selected loopback URL and PKCE; no redirect URI editing is needed.
+The existing web-client configuration remains supported when its registered
+callback port is available. If the launcher selects a different port for a web
+client, the UI asks for the one-time Desktop setup instead of starting a broken
+Google login. The launcher sets `CYBERTWIN_APP_URL` for this process only.
+
+Google registration, account consent and testing/verification rules still apply;
+the app cannot create clients or approve test users on the owner's behalf.
+Credentials remain memory-only, so a server restart still requires reconnecting.
+Since migration checklists use browser origin storage, a different selected
+port has separate checklist storage; export important checklists before moving.

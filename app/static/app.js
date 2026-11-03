@@ -61,7 +61,8 @@ async function refreshStatus() {
     $('scan-button').disabled = !status.gmail_connected;
     $('discover-button').disabled = !status.gmail_connected; if ($('disconnect-gmail')) $('disconnect-gmail').hidden = !status.gmail_connected;
     const setup = await api('/gmail/setup');
-    $('setup-state').textContent = setup.configured ? 'Local credentials are configured. Google Cloud test-user access still needs to be set in your project.' : 'Local setup needs attention: ' + (setup.missing.length ? 'Add ' + setup.missing.join(', ') + ' to the project .env. ' : '') + (!setup.redirect_valid ? 'Use a localhost or 127.0.0.1 callback URL with a port and /gmail/callback path.' : '');
+    $('setup-state').textContent = setup.configured ? 'Ready. Click Connect Gmail and choose your account.' : 'Complete the one-time Desktop app setup above, then click Connect Gmail.';
+    $('desktop-setup').open = !setup.configured;
     $('callback-url').textContent = setup.callback_url || 'GOOGLE_REDIRECT_URI in your project .env';
     $('audience-link').href = setup.audience_url;
     if (setup.dashboard_url) $('canonical-dashboard').href = setup.dashboard_url;
@@ -77,3 +78,18 @@ if (params.has('gmail_error')) {
   showMessage(errors[params.get('gmail_error')] || 'Reconnect Gmail using the setup guide.', true);
   history.replaceState(null, '', '/');
 }
+
+document.getElementById('desktop-client-form').addEventListener('submit', async event => {
+  event.preventDefault(); const file = document.getElementById('desktop-client-file').files[0];
+  const status = document.getElementById('desktop-client-status');
+  if (!file || file.size > 100000) { status.textContent = 'Choose the small Google Desktop client JSON file.'; return; }
+  const button = event.currentTarget.querySelector('button'); button.disabled = true;
+  try {
+    const raw = await file.text();
+    try { JSON.parse(raw); } catch { throw new Error('Choose a valid JSON file.'); }
+    const result = await api('/gmail/setup-client', {method:'POST', headers:{'Content-Type':'application/json'}, body:raw});
+    status.textContent = result.message; document.getElementById('desktop-client-file').value = '';
+    await refreshStatus(); document.querySelector('[data-view="gmail"]').click(); showMessage('Setup complete. Click Connect Gmail.');
+  } catch (error) { status.textContent = error.message; }
+  finally { button.disabled = false; }
+});
