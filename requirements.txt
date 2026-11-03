@@ -9,3 +9,5 @@ google-auth-oauthlib
 google-api-python-client
 python-dotenv
 google-auth-httplib2
+
+reportlab>=4,<5

@@ -14,3 +14,6 @@ output/
 practical-tools/installers/
 practical-tools/volatility3/
 node_modules/
+
+# Private monitoring registry and alert history
+data/

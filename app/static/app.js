@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 let busy = false;
 let activeView = 'gmail';
 let currentResults = [];
-const titles = {migration: ['Move email', 'Move on from your old email.', 'Keep track of accounts to update before you retire an old address.'], public: ['GitHub profile', 'Inspect a GitHub profile.', 'Public profile dates and recent public activity for a username you choose.'], gmail: ['Inbox & services', '1. Connect your inbox.', 'Connect your email, scan the mailbox and see the services you may have joined.'], breaches: ['Breach lookup', '2. Look up service breaches.', 'Use the service list from Module 1 to inspect known breach history.'], secure: ['Secure accounts', '3. Secure your accounts.', 'Follow practical steps based on the breach results and your mailbox evidence.'], guide: ['Help & setup', 'Get connected. Start discovering.', 'Fix Google access, check the setup, and understand your results.']};
+const titles = {monitor: ['Monitor & report', '4. Monitor and report.', 'Detect new service clues, review breach alerts and download your personal report.'], migration: ['Move email', 'Move on from your old email.', 'Keep track of accounts to update before you retire an old address.'], public: ['GitHub profile', 'Inspect a GitHub profile.', 'Public profile dates and recent public activity for a username you choose.'], gmail: ['Inbox & services', '1. Connect your inbox.', 'Connect your email, scan the mailbox and see the services you may have joined.'], breaches: ['Breach lookup', '2. Look up service breaches.', 'Use the service list from Module 1 to inspect known breach history.'], secure: ['Secure accounts', '3. Secure your accounts.', 'Follow practical steps based on the breach results and your mailbox evidence.'], guide: ['Help & setup', 'Get connected. Start discovering.', 'Fix Google access, check the setup, and understand your results.']};
 function node(tag, text, cls) { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; if (cls) element.className = cls; return element; }
 function showMessage(text, error = false) { const box = $('message'); box.textContent = text; box.className = 'message' + (error ? ' error' : ''); box.hidden = false; }
 function date(value) { if (!value) return 'Not available'; const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) return 'Not available'; return parsed.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZoneName:'short'}); }
@@ -62,6 +62,7 @@ $('discover-button').addEventListener('click', () => run(async () => {
 async function refreshStatus() {
   try {
     const status = await api('/api/status');
+    window.gmailConnected = status.gmail_connected;
     $('gmail-state').textContent = status.gmail_connected ? '● Gmail connected · read-only access' : '○ Connect Gmail to find your accounts';
     $('scan-button').disabled = !status.gmail_connected;
     $('discover-button').disabled = !status.gmail_connected; if ($('disconnect-gmail')) $('disconnect-gmail').hidden = !status.gmail_connected;

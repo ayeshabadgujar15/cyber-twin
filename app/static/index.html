@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light"><title>Cyber Twin · Account overview</title>
-  <link rel="stylesheet" href="/static/style.css?v=modules-1"><script src="/static/workspace.js?v=modules-1" defer></script><script src="/static/app.js?v=modules-1" defer></script><script src="/static/migration-model.js?v=modules-1" defer></script><script src="/static/migration.js?v=modules-1" defer></script>
-  <script src="/static/modules.js?v=modules-1" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=monitor-1"><script src="/static/workspace.js?v=monitor-1" defer></script><script src="/static/app.js?v=monitor-1" defer></script><script src="/static/migration-model.js?v=monitor-1" defer></script><script src="/static/migration.js?v=monitor-1" defer></script>
+  <script src="/static/modules.js?v=monitor-1" defer></script>
+  <script src="/static/monitor.js?v=monitor-1" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to workspace</a>
@@ -15,6 +16,7 @@
     <button class="nav-item selected" data-view="gmail">1. Inbox &amp; services</button>
     <button class="nav-item" data-view="breaches">2. Breach lookup</button>
     <button class="nav-item" data-view="secure">3. Secure accounts</button>
+    <button class="nav-item" data-view="monitor">4. Monitor &amp; report</button>
   </nav><button class="text-button" data-view="guide">Help &amp; setup</button>
   <div class="sidebar-note"><strong>You control each lookup.</strong><p>Mailbox metadata only.<br>No email bodies.<br>Optional HIBP check sends your connected address to HIBP.</p></div>
   <div class="sidebar-bottom"><span class="live-dot"></span> Local app<small>Single-user prototype</small><a href="/docs" target="_blank" rel="noopener">API documentation ↗</a></div>
@@ -80,6 +82,17 @@
     </section>
 </details>
     </section>
+    <section id="monitor-panel" class="view-panel" hidden>
+      <div class="search-card"><h2>Keep watching your digital footprint.</h2><p>The local Gmail connector checks new mail for signup clues and periodically rechecks known services for breach history. It runs while the Cyber Twin server is open, even if this browser tab is closed. This is polling, not an always-on Gmail extension.</p>
+        <p class="coverage">Starting monitoring saves service domains, evidence dates, message-ID checkpoints and alerts to this computer. No email bodies, subjects or Google tokens are saved. Records remain until you delete them here. A signup clue is not proof of registration; a service breach is not proof your account was affected.</p>
+        <div class="form-row"><div class="field"><label for="monitor-inbox-interval">Check new email</label><select id="monitor-inbox-interval"><option value="120">Every 2 minutes</option><option value="60">Every minute</option><option value="300">Every 5 minutes</option></select></div><div class="field"><label for="monitor-breach-interval">Recheck service breaches</label><select id="monitor-breach-interval"><option value="1800">Every 30 minutes</option><option value="600">Every 10 minutes</option><option value="3600">Every hour</option></select></div></div>
+        <div class="form-row monitor-controls"><button id="monitor-start" class="primary" type="button">Start / resume monitoring</button><button id="monitor-stop" class="secondary" type="button" disabled>Stop monitoring</button><button id="monitor-check" class="secondary" type="button" disabled>Check now</button><button id="monitor-notify" class="text-button" type="button">Enable browser alerts</button></div>
+        <p id="monitor-state" role="status" aria-live="polite">Monitoring is off.</p><p id="monitor-coverage" class="evidence-note"></p>
+      </div>
+      <div class="search-card report-download"><h2>Digital Footprint &amp; Security Report</h2><p>Download all services in the selected source, breach findings and recommended actions. Accounts needing review appear in red; unchecked accounts appear in amber. No health percentage or guarantee of safety.</p><div class="form-row"><div class="field grow"><label for="report-source">Report source</label><select id="report-source"><option value="scan">Current loaded scan / demo</option><option value="monitor">Saved monitored services</option></select></div><button id="report-pdf" class="primary" type="button">Download PDF</button><button id="report-html" class="secondary" type="button">Download HTML</button></div><p id="report-status" role="status" aria-live="polite"></p></div>
+      <section id="monitor-alerts" aria-label="Saved monitoring alerts"></section>
+      <details class="module-extra"><summary>Saved service inventory and privacy controls</summary><p id="monitor-inventory-note" class="evidence-note"></p><div id="monitor-inventory"></div><button id="monitor-delete" class="text-button" type="button">Delete this mailbox’s saved monitoring data</button></details>
+    </section>
     <section id="guide-panel" class="view-panel" hidden>
       <div class="search-card guide"><h2>Connect Gmail in one click.</h2><p>Once the app is set up, click <strong>Connect Gmail</strong>, choose your Google account, and allow read-only Gmail access.</p>
         <details id="desktop-setup"><summary>One-time setup for this local app</summary><p>The Google Cloud project owner needs to enable Gmail API and download an OAuth client of type <strong>Desktop app</strong>. Choose that JSON file below. It stays on this computer; no callback URLs or port edits are needed for Desktop clients.</p><ol><li>Open Google Cloud → Google Auth Platform → Clients → Create client.</li><li>Choose <strong>Desktop app</strong>, create it and download its JSON file.</li><li>If the app is in Testing, add your Gmail address under Audience → Test users.</li></ol><p><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Open Google client settings ↗</a></p><form id="desktop-client-form"><label for="desktop-client-file">Google Desktop app JSON file</label><input id="desktop-client-file" type="file" accept=".json,application/json" required><button class="secondary" type="submit">Save one-time setup</button></form><p id="desktop-client-status" role="status" aria-live="polite"></p></details>
@@ -94,7 +107,7 @@
       </div></details>
     </section>
 
-    <footer><strong>Cyber Twin</strong><span>1. Discover services · 2. Check breaches · 3. Secure accounts</span></footer>
+    <footer><strong>Cyber Twin</strong><span>1. Discover · 2. Breaches · 3. Secure · 4. Monitor &amp; report</span></footer>
   </div>
 </main>
 </body>

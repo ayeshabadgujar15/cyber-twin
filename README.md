@@ -49,7 +49,7 @@ and use one server worker. The unified version retains the local OAuth state,
 browser-state-cookie and expiry checks rather than the other version's unbounded
 browser-session dictionary. It does not provide multi-user hosting.
 
-Credentials and normalized scan results are memory-only. Background results
+Credentials and on-demand scan results are memory-only. Opt-in Module 4 monitoring saves a normalized service inventory and alert history locally. Background results
 expire ten minutes after completion; the dashboard clears them after fetching.
 Full scans temporarily hold metadata in memory until normalization. Legacy
 registration discovery returns subject evidence for compatibility.
@@ -172,3 +172,50 @@ Remaining API-only discovery/research adapters: Chess.com, Gravatar, IntelBase
 (Module 1 support) and manual place analysis (research helper, outside the main
 three-stage workflow). They are not invoked automatically. Startup/OAuth setup,
 disconnect and developer API docs are shared support features.
+
+
+## Module 4: continuous detection and personal report
+
+The optional **Monitor & report** module is a local Gmail connector, not a
+browser extension or cloud service. After Gmail connection, explicitly start it
+to save a mailbox-isolated service inventory, message-ID checkpoints and alert
+history in ignored `data/monitor.sqlite3`. No raw subjects, bodies, passwords or
+OAuth tokens are saved. The worker runs while the local Python server is alive,
+including when the browser tab is closed. Restart/revocation stops monitoring;
+reconnect and resume explicitly. Credentials are still memory-only.
+
+Default checks: new Gmail history every 2 minutes; public service breach
+catalogue every 30 minutes. Inbox interval is configurable from 1–60 minutes;
+breach interval from 10 minutes–24 hours through the API. New service clues
+trigger a breach refresh. Alerts deduplicate per signup domain and provider
+incident/version; "newly detected" can describe an older incident newly loaded
+by the provider. Browser notifications are optional and requested only by an
+explicit button click; they require a supported browser and an open dashboard.
+In-app alert history is persistent. Acknowledgement is not security remediation.
+
+The first activation performs a recent 500-message baseline, merging a matching
+loaded Gmail scan when supplied. History polling handles pagination and stores
+checkpoints only after processed messages/records. It processes up to 1,000 new
+messages per pass; pending backlogs remain labelled. An expired Gmail history
+checkpoint generates a coverage-gap alert and uses a bounded recent rescan;
+that is not a full historical recovery. Run a full Module 1 scan and restart
+with that loaded scan to refresh the service inventory. Mainly English subject
+rules can miss registrations. Sender domains and ownership are unverified.
+
+Download a **Digital Footprint & Security Report** as PDF or self-contained HTML
+from a loaded scan (including the clearly labelled fictional demo) or the full
+saved monitoring inventory. Reports contain all discovered services in the
+selected source, first/last evidence, review reasons, detailed breach findings,
+recommended actions, coverage and recent alerts. Red means review needed;
+amber means unchecked/unavailable; neutral means no flagged signals, never
+"safe". Failed provider refreshes retain previous positive findings as stale.
+Reports contain personal account metadata and should be kept private.
+
+Install updated requirements for PDF support (`reportlab`). Delete saved data
+from Module 4 privacy controls; this removes database records for the current
+mailbox, not exported copies or Google account data. File/database deletion is
+not a secure-erasure guarantee. The browser inventory displays at most 100
+services and alerts; the downloaded report includes the full service inventory.
+Processed message-ID markers expire after 30 days; signup/incident alert keys
+still prevent repeated alert spam. Monitoring data remains until explicitly
+deleted. Review other-user access to this local machine accordingly.

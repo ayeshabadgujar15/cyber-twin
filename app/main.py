@@ -40,6 +40,7 @@ async def app_lifespan(application):
     try:
         yield
     finally:
+        monitor.stop(wait=True)
         scan_jobs.shutdown()
 
 
@@ -110,6 +111,7 @@ def disconnect_gmail(request: Request, revoke: bool = False):
             revoke_credentials(gmail_credentials)
         except (URLError, OSError):
             raise HTTPException(502, 'Google permission could not be revoked. Retry, or disconnect locally.') from None
+    monitor.stop()
     gmail_credentials = None
     clear_pending_flow()
     scan_jobs.clear()
@@ -214,6 +216,7 @@ def gmail_scan_error(error):
     global gmail_credentials
     status = getattr(getattr(error, 'resp', None), 'status', None)
     if isinstance(error, GoogleAuthError) or status == 401:
+        monitor.stop()
         gmail_credentials = None
         scan_jobs.clear()
         return HTTPException(401, 'Your Google connection expired or was revoked. Click Connect Gmail again. Testing-mode permissions may expire after seven days.')
@@ -318,6 +321,7 @@ def gmail_callback(code: str | None = None, state: str | None = None, error: str
     else:
         try:
             new_credentials = fetch_credentials(code, state)
+            monitor.stop()
             scan_jobs.clear()
             gmail_connection_generation += 1
             gmail_credentials = new_credentials
@@ -477,3 +481,10 @@ def module_service_breaches(body: ServiceBreachRequest, request: Request):
     return {'checks':checks, 'security_plan':security_plan(services,checks), 'is_demo':False,
             'checked_at':datetime.now(timezone.utc).isoformat(),
             'note':'Public HIBP service history, not proof this person was affected. Your email address is not sent for this check.'}
+
+
+from app.monitoring.manager import MonitorManager
+from app.monitoring.router import create_monitor_router
+monitor = MonitorManager(lambda: (gmail_credentials, gmail_connection_generation),
+                         Path(__file__).resolve().parents[1] / 'data' / 'monitor.sqlite3')
+app.include_router(create_monitor_router(monitor, require_local_request))

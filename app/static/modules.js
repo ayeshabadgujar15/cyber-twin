@@ -26,6 +26,7 @@ function restoreModuleView() {
     $('all-activity').hidden = true;
   } else if (activeView === 'breaches') renderBreachModule();
   else if (activeView === 'secure') renderSecurityModule();
+  else if (activeView === 'monitor' && typeof refreshMonitor === 'function') refreshMonitor();
 }
 function openSecurityReview(category) {
   document.querySelector('[data-view="secure"]').click();
